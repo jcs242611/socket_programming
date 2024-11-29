@@ -16,7 +16,7 @@ void closeConnection(int room, int reception, int error = 0)
 {
     close(room);
     close(reception);
-    cout << (error ? "[ERROR] " : "[END] ") << "Connection ended with client" << endl;
+    cout << (error ? "[SERVER | ERROR] " : "[SERVER | END] ") << "Connection ended with client" << endl;
 }
 
 int main()
@@ -24,7 +24,7 @@ int main()
     ifstream config_file("config.json");
     if (!config_file.is_open())
     {
-        cerr << "[ERROR] Failed to open config.json" << endl;
+        cerr << "[SERVER | ERROR] Failed to open config.json" << endl;
         return 1;
     }
 
@@ -35,7 +35,7 @@ int main()
     }
     catch (const json::parse_error &e)
     {
-        cerr << "[ERROR] Error parsing JSON: " << e.what() << endl;
+        cerr << "[SERVER | ERROR] Error parsing JSON: " << e.what() << endl;
         return 1;
     }
 
@@ -45,12 +45,12 @@ int main()
     int serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (serverSocket < 0)
     {
-        cout << "[ERROR] Socket not opened" << endl;
+        cout << "[SERVER | ERROR] Socket not opened" << endl;
         close(serverSocket);
         return 1;
     }
     else
-        cout << "[INFO] Socket opened with id=" << serverSocket << endl;
+        cout << "[SERVER | INFO] Socket opened with id=" << serverSocket << endl;
 
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORT);
@@ -61,31 +61,31 @@ int main()
     int bindResult = ::bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
     if (bindResult < 0)
     {
-        cout << "[ERROR] Failed to bind" << endl;
+        cout << "[SERVER | ERROR] Failed to bind" << endl;
         close(serverSocket);
         return 1;
     }
     else
-        cout << "[INFO] Binding Successfull" << endl;
+        cout << "[SERVER | INFO] Binding Successfull" << endl;
 
     int listenResult = listen(serverSocket, 5);
     if (listenResult < 0)
     {
-        cout << "[ERROR] Failed to start listening" << endl;
+        cout << "[SERVER | ERROR] Failed to start listening" << endl;
         close(serverSocket);
         return 1;
     }
     else
-        cout << "[INFO] Listening... on IP:" << serverIP << " and PORT:" << PORT << endl;
+        cout << "[SERVER | INFO] Listening... on IP:" << serverIP << " and PORT:" << PORT << endl;
 
     int connectionWithClient = accept(serverSocket, (struct sockaddr *)&serverAddr, (socklen_t *)&serverAddrlen);
     if (connectionWithClient < 0)
     {
-        perror("[ERROR] Accept failed");
+        perror("[SERVER | ERROR] Accept failed");
         close(serverSocket);
         return 1;
     }
-    cout << "[INFO] Connection established with client" << endl;
+    cout << "[SERVER | INFO] Connection established with client" << endl;
 
     // Word Counting
     int k = config["k"];
@@ -101,7 +101,7 @@ int main()
             string msg(buffer);
             msg.erase(msg.find("\n"));
             int offset = stoi(msg);
-            cout << "[RECEIEVE] offset=" << offset << endl;
+            cout << "[SERVER | RECEIEVE] offset=" << offset << endl;
 
             ifstream inputFile(fileName);
             if (!inputFile.is_open())
@@ -132,7 +132,7 @@ int main()
                             packet += word + ",";
                         if (pktWordCount == p || totalWordCounter == k)
                         {
-                            cout << "[SEND] data=" << packet << endl;
+                            cout << "[SERVER | SEND] data=" << packet << endl;
                             packet += "\n";
                             send(connectionWithClient, packet.c_str(), packet.length(), 0);
                             packet = "";
@@ -143,13 +143,13 @@ int main()
 
                 if (wordDescriptor < offset)
                 {
-                    cout << "[SEND] out-of-bound offset" << endl;
+                    cout << "[SERVER | SEND] out-of-bound offset" << endl;
                     send(connectionWithClient, "$$\n", 4, 0);
                 }
                 else if (totalWordCounter < k)
                 {
                     packet += "EOF";
-                    cout << "[SEND] data=" << packet << endl;
+                    cout << "[SERVER | SEND] data=" << packet << endl;
                     packet += "\n";
                     send(connectionWithClient, packet.c_str(), packet.length(), 0);
                     break;
@@ -159,7 +159,13 @@ int main()
         }
         catch (const exception &e)
         {
-            cerr << "[ERROR] " << e.what() << "\n";
+            cerr << "[SERVER | ERROR] " << e.what() << "\n";
+            closeConnection(connectionWithClient, serverSocket, 1);
+            return 1;
+        }
+        catch (const char *e)
+        {
+            cout << "[SERVER | ERROR] " << e << endl;
             closeConnection(connectionWithClient, serverSocket, 1);
             return 1;
         }

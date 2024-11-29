@@ -15,7 +15,7 @@ struct sockaddr_in serverAddr;
 void closeConnection(int caller, int error = 0)
 {
     close(caller);
-    cout << (error ? "[ERROR] " : "[END] ") << "Connection ended with client" << endl;
+    cout << (error ? "[CLIENT | ERROR] " : "[CLIENT | END] ") << "Connection ended with client" << endl;
 }
 
 int main()
@@ -23,7 +23,7 @@ int main()
     ifstream config_file("config.json");
     if (!config_file.is_open())
     {
-        cerr << "[ERROR] Failed to open config.json" << endl;
+        cerr << "[CLIENT | ERROR] Failed to open config.json" << endl;
         return 1;
     }
 
@@ -34,19 +34,19 @@ int main()
     }
     catch (const json::parse_error &e)
     {
-        cerr << "[ERROR] Error parsing JSON: " << e.what() << endl;
+        cerr << "[CLIENT | ERROR] Error parsing JSON: " << e.what() << endl;
         return 1;
     }
 
     int clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (clientSocket < 0)
     {
-        cout << "[ERROR] Socket not opened" << endl;
+        cout << "[CLIENT | ERROR] Socket not opened" << endl;
         close(clientSocket);
         return 1;
     }
     else
-        cout << "[INFO] Socket opened with id=" << clientSocket << endl;
+        cout << "[CLIENT | INFO] Socket opened with id=" << clientSocket << endl;
 
     struct timeval timeout;
     timeout.tv_sec = 2;
@@ -65,11 +65,11 @@ int main()
     int connectionWithServer = connect(clientSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
     if (connectionWithServer < 0)
     {
-        perror("[ERROR] Connection failed");
+        perror("[CLIENT | ERROR] Connection failed");
         close(clientSocket);
         return -1;
     }
-    cout << "[INFO] Connection established with server" << endl;
+    cout << "[CLIENT | INFO] Connection established with server" << endl;
 
     // Word Counting
     int k = config["k"];
@@ -84,7 +84,7 @@ int main()
         {
             if (totalWordCount % k == 0)
             {
-                cout << "[SEND] offset=" << totalWordCount + 1 << endl;
+                cout << "[CLIENT | SEND] offset=" << totalWordCount + 1 << endl;
                 string wordOffsetInString = to_string(totalWordCount + 1) + "\n";
                 send(clientSocket, wordOffsetInString.c_str(), wordOffsetInString.length() + 2, 0);
             }
@@ -101,7 +101,7 @@ int main()
 
                 while (getline(pktStream, pkt))
                 {
-                    cout << "[RECEIVE] data=" << pkt << endl;
+                    cout << "[CLIENT | RECEIVE] data=" << pkt << endl;
                     if (pkt == "$$")
                         throw "Invalid offset (could be EOF sometimes)";
 
@@ -112,7 +112,7 @@ int main()
                     {
                         if (word == "EOF")
                         {
-                            cout << "[SUCCESS] Download complete" << endl;
+                            cout << "[CLIENT | SUCCESS] Download complete" << endl;
                             EOFWord = true;
                             break;
                         }
@@ -130,13 +130,13 @@ int main()
         }
         catch (const exception &e)
         {
-            cerr << "[ERROR] " << e.what() << '\n';
+            cerr << "[CLIENT | ERROR] " << e.what() << '\n';
             closeConnection(clientSocket, 1);
             return 1;
         }
         catch (const char *e)
         {
-            cout << "[ERROR] " << e << endl;
+            cout << "[CLIENT | ERROR] " << e << endl;
             if (string(e).compare("Invalid offset (could be EOF sometimes)") == 0)
                 break;
 
@@ -149,15 +149,16 @@ int main()
     ofstream outputFile("output.txt");
     if (!outputFile)
     {
-        cerr << "[ERROR] Error opening file for writing!" << endl;
+        cerr << "[CLIENT | ERROR] Error opening file for writing!" << endl;
         closeConnection(clientSocket, 1);
         return 1;
     }
 
-    for (auto it = wordCount.begin(); it != wordCount.end(); ++it)
+    map<string, int> wordCountInDict(wordCount.begin(), wordCount.end());
+    for (auto it = wordCountInDict.begin(); it != wordCountInDict.end(); ++it)
     {
         outputFile << it->first << "," << to_string(it->second);
-        if (next(it) != wordCount.end())
+        if (next(it) != wordCountInDict.end())
             outputFile << endl;
     }
 

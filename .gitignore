@@ -12,3 +12,8 @@
 
 # VS Code
 .vscode
+
+# Assignment related
+words.txt
+output.txt
+!Makefile
