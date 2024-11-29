@@ -21,8 +21,6 @@ void closeConnection(int room, int reception, int error = 0)
 
 int main()
 {
-    char buffer[1024] = {0};
-
     ifstream config_file("config.json");
     if (!config_file.is_open())
     {
@@ -48,6 +46,7 @@ int main()
     if (serverSocket < 0)
     {
         cout << "[ERROR] Socket not opened" << endl;
+        close(serverSocket);
         return 1;
     }
     else
@@ -63,6 +62,7 @@ int main()
     if (bindResult < 0)
     {
         cout << "[ERROR] Failed to bind" << endl;
+        close(serverSocket);
         return 1;
     }
     else
@@ -72,6 +72,7 @@ int main()
     if (listenResult < 0)
     {
         cout << "[ERROR] Failed to start listening" << endl;
+        close(serverSocket);
         return 1;
     }
     else
@@ -81,6 +82,7 @@ int main()
     if (connectionWithClient < 0)
     {
         perror("[ERROR] Accept failed");
+        close(serverSocket);
         return 1;
     }
     cout << "[INFO] Connection established with client" << endl;
@@ -90,16 +92,10 @@ int main()
     int p = config["p"];
     string fileName = config["input_file"];
 
-    while (true)
+    char buffer[1024] = {0};
+    int msgVal = 0;
+    while ((msgVal = recv(connectionWithClient, buffer, 1024, 0)) > 0)
     {
-        int msgVal = recv(connectionWithClient, buffer, 1024, 0);
-        if (msgVal < 0)
-        {
-            perror("[ERROR] No message received");
-            closeConnection(connectionWithClient, serverSocket, 1);
-            return 1;
-        }
-
         try
         {
             string msg(buffer);
@@ -147,7 +143,7 @@ int main()
 
                 if (wordDescriptor < offset)
                 {
-                    cout << "[SEND] invalid offset" << endl;
+                    cout << "[SEND] out-of-bound offset" << endl;
                     send(connectionWithClient, "$$\n", 4, 0);
                 }
                 else if (totalWordCounter < k)
@@ -156,15 +152,14 @@ int main()
                     cout << "[SEND] data=" << packet << endl;
                     packet += "\n";
                     send(connectionWithClient, packet.c_str(), packet.length(), 0);
+                    break;
                 }
             }
             inputFile.close();
-
-            break;
         }
         catch (const exception &e)
         {
-            cerr << "[ERROR] " << e.what() << '\n';
+            cerr << "[ERROR] " << e.what() << "\n";
             closeConnection(connectionWithClient, serverSocket, 1);
             return 1;
         }
