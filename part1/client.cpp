@@ -146,7 +146,7 @@ int main()
     }
 
     // Writing to file
-    ofstream outputFile("output.txt");
+    ofstream outputFile("output_1.txt");
     if (!outputFile)
     {
         cerr << "[CLIENT | ERROR] Error opening file for writing!" << endl;
