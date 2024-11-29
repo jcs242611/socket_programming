@@ -6,12 +6,13 @@ from scipy import stats
 
 
 def run_server(p):
-    result = subprocess.Popen(['./server', str(p)])
+    result = subprocess.Popen(
+        ['./server_exe', str(p)], stdout=subprocess.DEVNULL)
     return result
 
 
 def run_client():
-    result = subprocess.run(['./client'])
+    result = subprocess.run(['./client_exe'], stdout=subprocess.DEVNULL)
     return result
 
 

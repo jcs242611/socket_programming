@@ -1,7 +1,10 @@
+# Python
+VENV := "/Users/nikhilg/Documents/Virtual Environments/Python/defaulter"
+PYTHON := $(VENV)/bin/python
+
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall
-PYTHON := python
 
 # Source files and targets
 SERVER_SRC = server.cpp
@@ -9,8 +12,6 @@ CLIENT_SRC = client.cpp
 
 SERVER_BIN = server_exe
 CLIENT_BIN = client_exe
-
-PLOT_SCRIPT := p1_plot.py
 
 .PHONY: all clean server client plot
 
@@ -34,8 +35,8 @@ client: $(CLIENT_BIN)
 	./$(CLIENT_BIN)
 
 # Plot graph
-plot: $(PLOT_SCRIPT)
-	$(PYTHON) $(PLOT_SCRIPT)
+plot:
+	$(PYTHON) ./p1_plot.py
 
 # Clean up binaries
 clean:
