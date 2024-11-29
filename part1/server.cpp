@@ -103,6 +103,7 @@ int main()
             int offset = stoi(msg);
             cout << "[SERVER | RECEIEVE] offset=" << offset << endl;
 
+            cout << "[SERVER | INFO] input-file=" << fileName << endl;
             ifstream inputFile(fileName);
             if (!inputFile.is_open())
                 throw "File not open";
