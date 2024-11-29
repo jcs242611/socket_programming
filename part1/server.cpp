@@ -90,7 +90,9 @@ int main()
     // Word Counting
     int k = config["k"];
     int p = config["p"];
+
     string fileName = config["input_file"];
+    cout << "[SERVER | INFO] input-file=" << fileName << endl;
 
     char buffer[1024] = {0};
     int msgVal = 0;
@@ -103,7 +105,6 @@ int main()
             int offset = stoi(msg);
             cout << "[SERVER | RECEIEVE] offset=" << offset << endl;
 
-            cout << "[SERVER | INFO] input-file=" << fileName << endl;
             ifstream inputFile(fileName);
             if (!inputFile.is_open())
                 throw "File not open";

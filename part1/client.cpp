@@ -157,7 +157,7 @@ int main()
     map<string, int> wordCountInDict(wordCount.begin(), wordCount.end());
     for (auto it = wordCountInDict.begin(); it != wordCountInDict.end(); ++it)
     {
-        outputFile << it->first << "," << to_string(it->second);
+        outputFile << it->first << ", " << to_string(it->second);
         if (next(it) != wordCountInDict.end())
             outputFile << endl;
     }
