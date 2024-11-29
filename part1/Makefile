@@ -1,6 +1,7 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall
+PYTHON := python
 
 # Source files and targets
 SERVER_SRC = server.cpp
@@ -9,7 +10,9 @@ CLIENT_SRC = client.cpp
 SERVER_BIN = server_exe
 CLIENT_BIN = client_exe
 
-.PHONY: all clean server client
+PLOT_SCRIPT := p1_plot.py
+
+.PHONY: all clean server client plot
 
 # Build all targets
 build: $(SERVER_BIN) $(CLIENT_BIN)
@@ -29,6 +32,10 @@ server: $(SERVER_BIN)
 # Run client
 client: $(CLIENT_BIN)
 	./$(CLIENT_BIN)
+
+# Plot graph
+plot: $(PLOT_SCRIPT)
+	$(PYTHON) $(PLOT_SCRIPT)
 
 # Clean up binaries
 clean:

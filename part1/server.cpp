@@ -19,7 +19,7 @@ void closeConnection(int room, int reception, int error = 0)
     cout << (error ? "[SERVER | ERROR] " : "[SERVER | END] ") << "Connection ended with client" << endl;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     ifstream config_file("config.json");
     if (!config_file.is_open())
@@ -37,6 +37,25 @@ int main()
     {
         cerr << "[SERVER | ERROR] Error parsing JSON: " << e.what() << endl;
         return 1;
+    }
+
+    int p = config["p"];
+    if (argc == 2)
+    {
+        try
+        {
+            p = stoi(argv[1]);
+        }
+        catch (const invalid_argument &e)
+        {
+            cerr << "[ERROR] Invalid value for p provided as argument" << endl;
+            return 1;
+        }
+        catch (const out_of_range &e)
+        {
+            cerr << "[ERROR] Value for p is out of range" << endl;
+            return 1;
+        }
     }
 
     string serverIP = config["server_ip"];
@@ -89,7 +108,6 @@ int main()
 
     // Word Counting
     int k = config["k"];
-    int p = config["p"];
 
     string fileName = config["input_file"];
     cout << "[SERVER | INFO] input-file=" << fileName << endl;
