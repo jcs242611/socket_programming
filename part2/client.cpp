@@ -9,41 +9,18 @@
 using namespace std;
 
 using json = nlohmann::json;
+json config;
 
 struct sockaddr_in serverAddr;
 
-void closeConnection(int caller, int error = 0)
+void *downloadFileFromServer(void *threadID)
 {
-    close(caller);
-    cout << (error ? "[CLIENT | ERROR] " : "[CLIENT | END] ") << "Connection ended with client" << endl;
-}
-
-int main()
-{
-    ifstream config_file("config.json");
-    if (!config_file.is_open())
-    {
-        cerr << "[CLIENT | ERROR] Failed to open config.json" << endl;
-        return 1;
-    }
-
-    json config;
-    try
-    {
-        config_file >> config;
-    }
-    catch (const json::parse_error &e)
-    {
-        cerr << "[CLIENT | ERROR] Error parsing JSON: " << e.what() << endl;
-        return 1;
-    }
-
     int clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (clientSocket < 0)
     {
         cout << "[CLIENT | ERROR] Socket not opened" << endl;
         close(clientSocket);
-        return 1;
+        return nullptr;
     }
     else
         cout << "[CLIENT | INFO] Socket opened with id=" << clientSocket << endl;
@@ -53,9 +30,9 @@ int main()
     timeout.tv_usec = 0;
     if (setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
     {
-        cerr << "[CLIENT | ERROR] Error setting socket timeout" << endl;
+        cerr << "[CLIENT | ERROR | " << clientSocket << "] Error setting socket timeout" << endl;
         close(clientSocket);
-        return 1;
+        return nullptr;
     }
 
     serverAddr.sin_family = AF_INET;
@@ -65,11 +42,11 @@ int main()
     int connectionWithServer = connect(clientSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
     if (connectionWithServer < 0)
     {
-        perror("[CLIENT | ERROR] Connection failed");
+        cerr << "[CLIENT | ERROR | " << clientSocket << "] Connection failed" << endl;
         close(clientSocket);
-        return -1;
+        return nullptr;
     }
-    cout << "[CLIENT | INFO] Connection established with server" << endl;
+    cout << "[CLIENT | INFO | " << clientSocket << "] Connection established with server" << endl;
 
     // Word Counting
     int k = config["k"];
@@ -84,7 +61,7 @@ int main()
         {
             if (totalWordCount % k == 0)
             {
-                cout << "[CLIENT | SEND] offset=" << totalWordCount + 1 << endl;
+                cout << "[CLIENT | SEND | " << clientSocket << "] offset=" << totalWordCount + 1 << endl;
                 string wordOffsetInString = to_string(totalWordCount + 1) + "\n";
                 send(clientSocket, wordOffsetInString.c_str(), wordOffsetInString.length() + 2, 0);
             }
@@ -101,7 +78,7 @@ int main()
 
                 while (getline(pktStream, pkt))
                 {
-                    cout << "[CLIENT | RECEIVE] data=" << pkt << endl;
+                    cout << "[CLIENT | RECEIVE | " << clientSocket << "] data=" << pkt << endl;
                     if (pkt == "$$")
                         throw "Invalid offset (could be EOF sometimes)";
 
@@ -112,7 +89,7 @@ int main()
                     {
                         if (word == "EOF")
                         {
-                            cout << "[CLIENT | SUCCESS] Download complete" << endl;
+                            cout << "[CLIENT | SUCCESS | " << clientSocket << "] Download complete" << endl;
                             EOFWord = true;
                             break;
                         }
@@ -130,28 +107,30 @@ int main()
         }
         catch (const exception &e)
         {
-            cerr << "[CLIENT | ERROR] " << e.what() << '\n';
-            closeConnection(clientSocket, 1);
-            return 1;
+            cerr << "[CLIENT | ERROR | " << clientSocket << "] " << e.what() << '\n';
+            close(clientSocket);
+            return nullptr;
         }
         catch (const char *e)
         {
-            cout << "[CLIENT | ERROR] " << e << endl;
+            cout << "[CLIENT | ERROR | " << clientSocket << "] " << e << endl;
             if (string(e).compare("Invalid offset (could be EOF sometimes)") == 0)
                 break;
 
-            closeConnection(clientSocket, 1);
-            return 1;
+            close(clientSocket);
+            return nullptr;
         }
     }
 
     // Writing to file
-    ofstream outputFile("output_1.txt");
+    string filename = "output_" + to_string(*(int *)threadID) + ".txt";
+    cout << "[CLIENT | WRITE | " << clientSocket << "] output-file=" << filename << endl;
+    ofstream outputFile(filename);
     if (!outputFile)
     {
-        cerr << "[CLIENT | ERROR] Error opening file for writing!" << endl;
-        closeConnection(clientSocket, 1);
-        return 1;
+        cerr << "[CLIENT | ERROR | " << clientSocket << "] Error opening file for writing!" << endl;
+        close(clientSocket);
+        return nullptr;
     }
 
     map<string, int> wordCountInDict(wordCount.begin(), wordCount.end());
@@ -162,7 +141,45 @@ int main()
             outputFile << endl;
     }
 
-    closeConnection(clientSocket);
+    close(clientSocket);
+    return nullptr;
+}
 
+int main()
+{
+    ifstream config_file("config.json");
+    if (!config_file.is_open())
+    {
+        cerr << "[CLIENT | ERROR] Failed to open config.json" << endl;
+        return 1;
+    }
+
+    try
+    {
+        config_file >> config;
+    }
+    catch (const json::parse_error &e)
+    {
+        cerr << "[CLIENT | ERROR] Error parsing JSON: " << e.what() << endl;
+        return 1;
+    }
+
+    int num_clients = config["num_clients"];
+    pthread_t threads[num_clients + 1];
+
+    for (int i = 1; i <= num_clients; i++)
+    {
+        int *threadID = new int(i);
+        int result = pthread_create(&threads[i], nullptr, downloadFileFromServer, threadID);
+        if (result != 0)
+            cerr << "[CLIENT | ERROR] Error creating thread " << i << endl;
+        else
+            cout << "[CLIENT | THREAD] threadID=" << i << " created" << endl;
+    }
+
+    for (int i = 1; i <= num_clients; i++)
+        pthread_join(threads[i], nullptr);
+
+    cout << "[CLIENT | SUCCESS] All client threads finished executing" << endl;
     return 0;
 }
