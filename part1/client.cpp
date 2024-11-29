@@ -53,9 +53,11 @@ int main()
     }
     cout << "[INFO] Connection established with server" << endl;
 
-    send(clientSocket, "YOWZA", 5, 0);
+    // Word Counting
+    send(clientSocket, "43\n", 4, 0);
 
     close(clientSocket);
+    cout << "[END] Connection ended with server" << endl;
 
     return 0;
 }
