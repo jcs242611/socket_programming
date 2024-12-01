@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <ctime>
 #include <pthread.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -13,12 +14,43 @@ using json = nlohmann::json;
 json config;
 
 struct sockaddr_in serverAddr;
+struct ServerStatus
+{
+    bool isBusy;
+    int clientSocketID;
+    unordered_map<int, clock_t> requestsStartTime;
+    clock_t lastConflictTime;
+};
+ServerStatus serverStatusPart3 = {false, -1, {}, 0};
 
 void *handleClient(void *clientSocketID)
 {
     int connectionWithClient = *(int *)clientSocketID;
     delete (int *)clientSocketID;
-    cout << "[SERVER | INFO] Connection established with clientID=" << connectionWithClient << endl;
+    cout << "[SERVER | INFO] clientID=" << connectionWithClient << " is trying to connect" << endl;
+
+    if (serverStatusPart3.requestsStartTime.find(connectionWithClient) == serverStatusPart3.requestsStartTime.end())
+        serverStatusPart3.requestsStartTime[connectionWithClient] = clock();
+
+    // Check if server is busy
+    if (serverStatusPart3.isBusy || (serverStatusPart3.lastConflictTime > serverStatusPart3.requestsStartTime[connectionWithClient]))
+    {
+        cout << "this:" << connectionWithClient << serverStatusPart3.clientSocketID << endl;
+        serverStatusPart3.lastConflictTime = clock();
+        cout << "[SERVER | INFO | " << connectionWithClient << "] Collision occured" << endl;
+
+        send(connectionWithClient, "HUH!\n", 5, 0);
+
+        if (serverStatusPart3.clientSocketID > 0)
+            send(serverStatusPart3.clientSocketID, "HUH!\n", 5, 0);
+
+        serverStatusPart3.isBusy = false;
+        serverStatusPart3.clientSocketID = -1;
+    }
+
+    serverStatusPart3.isBusy = true;
+    serverStatusPart3.clientSocketID = connectionWithClient;
+    cout << "[SERVER | INFO | " << connectionWithClient << "] Connection established" << endl;
 
     // Word Counting
     int k = config["k"];
@@ -81,7 +113,7 @@ void *handleClient(void *clientSocketID)
                 if (wordDescriptor < offset)
                 {
                     cout << "[SERVER | SEND | " << connectionWithClient << "] out-of-bound offset" << endl;
-                    send(connectionWithClient, "$$\n", 4, 0);
+                    send(connectionWithClient, "$$\n", 3, 0);
                 }
                 else if (totalWordCounter < k)
                 {
@@ -112,6 +144,9 @@ void *handleClient(void *clientSocketID)
 
     if (!connectionBroken)
         close(connectionWithClient);
+
+    serverStatusPart3.isBusy = false;
+    serverStatusPart3.clientSocketID = -1;
     pthread_exit(nullptr);
 }
 

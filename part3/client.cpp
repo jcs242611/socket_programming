@@ -54,11 +54,14 @@ void *downloadFileFromServer(void *threadID)
 
     // Word Counting
     int k = config["k"];
+    int T = config["T"];
+    int num_clients = config["num_clients"];
 
     unordered_map<string, int> wordCount;
     int totalWordCount = 0;
 
     bool EOFWord = false;
+startDownload:
     while (!EOFWord)
     {
         try
@@ -85,6 +88,23 @@ void *downloadFileFromServer(void *threadID)
                     cout << "[CLIENT | RECEIVE | " << clientSocket << "] data=" << pkt << endl;
                     if (pkt == "$$")
                         throw "Invalid offset (could be EOF sometimes)";
+                    if (pkt == "HUH!")
+                    {
+                        wordCount.clear();
+                        totalWordCount = 0;
+
+                        while (true)
+                        {
+                            auto now = system_clock::now();
+                            auto currentTimestamp = duration_cast<milliseconds>(now.time_since_epoch()).count();
+                            long long nextTimestamp = ((currentTimestamp / T) + 1) * T;
+                            usleep((nextTimestamp - currentTimestamp) * 1000);
+
+                            cout << "[CLIENT | RETRY | " << clientSocket << "] trying to download again" << endl;
+                            if ((float)rand() / RAND_MAX < 1.0f / num_clients)
+                                goto startDownload;
+                        }
+                    }
 
                     stringstream wordStream(pkt);
                     string word;
@@ -156,6 +176,9 @@ void *downloadFileFromServer(void *threadID)
 
 int main(int argc, char *argv[])
 {
+    // For random value
+    srand(static_cast<unsigned int>(time(0)));
+
     ifstream config_file("config.json");
     if (!config_file.is_open())
     {

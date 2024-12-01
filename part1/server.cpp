@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
                 if (wordDescriptor < offset)
                 {
                     cout << "[SERVER | SEND] out-of-bound offset" << endl;
-                    send(connectionWithClient, "$$\n", 4, 0);
+                    send(connectionWithClient, "$$\n", 3, 0);
                 }
                 else if (totalWordCounter < k)
                 {

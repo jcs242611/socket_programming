@@ -81,7 +81,7 @@ void *handleClient(void *clientSocketID)
                 if (wordDescriptor < offset)
                 {
                     cout << "[SERVER | SEND | " << connectionWithClient << "] out-of-bound offset" << endl;
-                    send(connectionWithClient, "$$\n", 4, 0);
+                    send(connectionWithClient, "$$\n", 3, 0);
                 }
                 else if (totalWordCounter < k)
                 {
