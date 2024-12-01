@@ -5,8 +5,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <chrono>
 #include "json.hpp"
 using namespace std;
+using namespace std::chrono;
 
 using json = nlohmann::json;
 json config;
@@ -15,6 +17,8 @@ struct sockaddr_in serverAddr;
 
 void *downloadFileFromServer(void *threadID)
 {
+    auto start = high_resolution_clock::now();
+
     int clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (clientSocket < 0)
     {
@@ -142,6 +146,11 @@ void *downloadFileFromServer(void *threadID)
     }
 
     close(clientSocket);
+
+    auto end = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(end - start);
+    cout << "[CLIENT | TIME | " << clientSocket << "] time-taken=" << duration.count() << " ms" << endl;
+
     return nullptr;
 }
 

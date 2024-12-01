@@ -1,6 +1,7 @@
 import subprocess
 import time
 import matplotlib.pyplot as plt
+import re
 
 
 def start_server():
@@ -8,42 +9,55 @@ def start_server():
 
 
 def run_client_and_measure_time(num_clients):
-    start_time = time.time()
-    subprocess.run(['./client_exe', str(num_clients)])
-    end_time = time.time()
-    total_time = end_time - start_time
-    avg_time_per_client = total_time / num_clients
-    return total_time, avg_time_per_client
+    process = subprocess.Popen(
+        ['./client_exe', str(num_clients)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    client_times = []
+    for line in process.stdout:
+        line = line.decode('utf-8').strip()
+        match = re.search(
+            r'\[CLIENT \| TIME \| \d+\] time-taken=(\d+) ms', line)
+        if match:
+            time_taken = int(match.group(1)) / 1000
+            client_times.append(time_taken)
+
+    process.wait()
+
+    avg_time_per_client = sum(client_times) / \
+        num_clients if num_clients > 0 else None
+    return avg_time_per_client
 
 
 def main():
-    client_counts = list(range(1, 33, 4))
-    avg_times = []
+    print("Starting the server...")
+    server_process = start_server()
+    time.sleep(2)
 
-    for count in client_counts:
-        print("Starting the server...")
-        server_process = start_server()
-        time.sleep(1)
-        print(f"\nRunning client program with {count} clients...")
-        total_time, avg_time = run_client_and_measure_time(count)
-        if avg_time is not None:
-            avg_times.append(avg_time)
-            print(f"Total time: {total_time:.3f}s | Avg time per client: {
-                  avg_time:.3f}s")
-        else:
-            avg_times.append(None)
-            print(f"Failed to get results for {count} clients.")
+    try:
+        client_counts = list(range(1, 33, 4))
+        avg_times = []
+
+        for count in client_counts:
+            print(f"\nRunning client program with {count} clients...")
+            avg_time = run_client_and_measure_time(count)
+            if avg_time is not None:
+                avg_times.append(avg_time)
+                print(f"Avg time per client: {avg_time:.3f}s")
+            else:
+                avg_times.append(None)
+                print(f"Failed to get results for {count} clients.")
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(client_counts, avg_times,
+                 marker='o', linestyle='-', color='b')
+        plt.title('Average Completion Time vs Number of Clients')
+        plt.xlabel('Number of Clients')
+        plt.ylabel('Average Completion Time (s)')
+        plt.grid(True)
+        plt.savefig("plot.png")
+    finally:
         print("Terminating the server...")
         server_process.terminate()
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(client_counts, avg_times,
-             marker='o', linestyle='-', color='b')
-    plt.title('Average Completion Time vs Number of Clients')
-    plt.xlabel('Number of Clients')
-    plt.ylabel('Average Completion Time (s)')
-    plt.grid(True)
-    plt.savefig("plot.png")
 
 
 if __name__ == "__main__":
