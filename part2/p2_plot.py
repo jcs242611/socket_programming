@@ -34,7 +34,7 @@ def main():
     time.sleep(2)
 
     try:
-        client_counts = list(range(1, 33, 4))
+        client_counts = list(range(4, 33, 4))
         avg_times = []
 
         for count in client_counts:
