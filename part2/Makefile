@@ -36,7 +36,7 @@ client: $(CLIENT_BIN)
 
 # Plot graph
 plot:
-	$(PYTHON) ./p1_plot.py
+	$(PYTHON) ./p2_plot.py
 
 # Clean up binaries
 clean:

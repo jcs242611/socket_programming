@@ -48,12 +48,12 @@ int main(int argc, char *argv[])
         }
         catch (const invalid_argument &e)
         {
-            cerr << "[ERROR] Invalid value for p provided as argument" << endl;
+            cerr << "[SERVER | ERROR] Invalid value for p provided as argument" << endl;
             return 1;
         }
         catch (const out_of_range &e)
         {
-            cerr << "[ERROR] Value for p is out of range" << endl;
+            cerr << "[SERVER | ERROR] Value for p is out of range" << endl;
             return 1;
         }
     }

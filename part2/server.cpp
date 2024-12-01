@@ -163,7 +163,7 @@ int main()
     else
         cout << "[SERVER | INFO] Binding Successfull" << endl;
 
-    int listenResult = listen(serverSocket, 5);
+    int listenResult = listen(serverSocket, 64);
     if (listenResult < 0)
     {
         cout << "[SERVER | ERROR] Failed to start listening" << endl;

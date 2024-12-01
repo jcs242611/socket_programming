@@ -145,7 +145,7 @@ void *downloadFileFromServer(void *threadID)
     return nullptr;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     ifstream config_file("config.json");
     if (!config_file.is_open())
@@ -165,6 +165,24 @@ int main()
     }
 
     int num_clients = config["num_clients"];
+    if (argc == 2)
+    {
+        try
+        {
+            num_clients = stoi(argv[1]);
+        }
+        catch (const invalid_argument &e)
+        {
+            cerr << "[CLIENT | ERROR] Invalid value for num_clients provided as argument" << endl;
+            return 1;
+        }
+        catch (const out_of_range &e)
+        {
+            cerr << "[CLIENT | ERROR] Value for num_clients is out of range" << endl;
+            return 1;
+        }
+    }
+
     pthread_t threads[num_clients + 1];
 
     for (int i = 1; i <= num_clients; i++)

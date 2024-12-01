@@ -16,5 +16,6 @@
 # Assignment related
 !Makefile
 words.txt
-output_[1-9].txt
+output_[0-9].txt
+output_[0-9][0-9].txt
 plot.png
